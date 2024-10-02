@@ -9,8 +9,9 @@ import { createStuffDocumentsChain } from "langchain/chains/combine_documents";
 import dotenv from "dotenv";
 
 dotenv.config();
-// In-memory store for conversation histories
-const conversationHistories = new Map();
+
+// In-memory store for conversation history
+let conversationHistory = [];
 
 export function toAsciiId(title) {
   return Buffer.from(title, "utf-8").toString("base64").replace(/=+$/, "");
@@ -18,10 +19,7 @@ export function toAsciiId(title) {
 
 export async function POST(req) {
   try {
-    const { userPrompt, sessionId } = await req.json();
-
-    // Retrieve or create a new conversation history for this session
-    let conversationHistory = conversationHistories.get(sessionId) || [];
+    const { userPrompt } = await req.json();
 
     const pinecone = new PineconeClient();
     const pineconeIndex = pinecone.Index(process.env.PINECONE_INDEX);
@@ -37,16 +35,11 @@ export async function POST(req) {
 
     const retriever = vectorStore.asRetriever({ k: 5 });
 
+    // Update prompt to include conversation history
     const prompt = ChatPromptTemplate.fromMessages([
       [
         "system",
-        `أنت مندوب مبيعات خبير في تقديم أفضل الحلول للمستخدمين. لديك قائمة بأحدث أجهزة اللابتوب الجديدة مع تفاصيل المواصفات والأسعار.
-        استخدم المعلومات المقدمة من المستخدم لتحديد أفضل جهاز لابتوب جديد يناسب احتياجاته، سواء كانت للاستخدام اليومي أو الأعمال المكتبية أو الألعاب. قدم توصياتك بناءً على المواصفات، السعر، وتوافر الجهاز في المخزون.
-        إذا لم يكن الجهاز المطلوب متوفراً ضمن الميزانية، اقترح أقرب بديل جديد يلبي احتياجاته بأفضل جودة ممكنة ضمن الفئة السعرية المحددة.
-        حافظ على إجابتك موجزة وواضحة بحيث تحتوي على الميزات الأساسية للجهاز المقترح.
-        تأكد من أن جميع التوصيات تكون لأجهزة جديدة فقط، ولا تقترح أبدًا أجهزة مستعملة أو مجددة.
-        لا تذكر ان الجهاز جديد او مستعمل اعرضه فقط .
-        تحدث بالمصرية العامية وليس اللغة العربية الفصحى.`,
+        "أنت مندوب مبيعات خبير في تقديم أفضل الحلول للمستخدمين. لديك قائمة بأحدث أجهزة اللابتوب مع تفاصيل المواصفات والأسعار.",
       ],
       [
         "human",
@@ -68,6 +61,7 @@ export async function POST(req) {
 
     const retrievedDocs = await retriever.invoke(userPrompt);
 
+    // Prepare conversation history
     const historyText = conversationHistory
       .map((entry) => `${entry.role}: ${entry.content}`)
       .join("\n");
@@ -82,13 +76,10 @@ export async function POST(req) {
     conversationHistory.push({ role: "human", content: userPrompt });
     conversationHistory.push({ role: "assistant", content: results });
 
-    // Keep only the last 10 messages
+    // Keep only the last 10 messages to limit context size
     if (conversationHistory.length > 10) {
       conversationHistory = conversationHistory.slice(-10);
     }
-
-    // Save the updated history
-    conversationHistories.set(sessionId, conversationHistory);
 
     return Response.json({
       retrievedDocs,
@@ -115,9 +106,7 @@ export async function GET(req) {
 
     const vectorStore = await PineconeStore.fromExistingIndex(embeddings, {
       pineconeIndex,
-      includeValues: true,
-      includeMetadata: true,
-      maxConcurrency: 10, // Adjust concurrency if needed
+      maxConcurrency: 5, // Adjust concurrency if needed
     });
 
     const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
