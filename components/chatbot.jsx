@@ -37,7 +37,7 @@ export default function AIAgentChatbot() {
         setIsTyping(true);
 
         try {
-            const response = await fetch('http://localhost:3000/api/rag', {
+            const response = await fetch('https://laptops-sales.vercel.app/api/rag', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
