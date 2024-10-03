@@ -91,7 +91,7 @@ export async function POST(req) {
       context: retrievedDocs,
     });
 
-    // Update conversation history
+    // Update conversation history (only user and AI responses)
     conversationHistory.push({ role: "human", content: userPrompt });
     conversationHistory.push({ role: "assistant", content: results });
 
@@ -114,6 +114,7 @@ export async function POST(req) {
     return Response.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
+
 // The GET function remains unchanged
 export async function GET(req) {
   try {

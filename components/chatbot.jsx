@@ -88,7 +88,7 @@ export default function AIAgentChatbot() {
     };
 
     return (
-        <div style={{ direction: 'rtl' }} className="flex flex-col h-screen max-w-2xl mx-auto p-4">
+        <div style={{ direction: 'rtl' }} className="flex flex-col h-screen max-w-2xl mx-auto p-4 text-right">
             <h1 className="text-2xl font-bold mb-4">(Beta)ابحث عن لابتوب مع الذكاء الاصطناعي</h1>
             <Button onClick={startNewChat} className="mb-4">Start New Chat</Button>
             <ScrollArea className="flex-grow mb-4 p-4 border rounded-md shadow-2xl " ref={scrollAreaRef}>
