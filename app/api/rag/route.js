@@ -11,6 +11,7 @@ import dotenv from "dotenv";
 dotenv.config();
 // In-memory store for conversation histories
 const conversationHistories = new Map();
+const retrievalResults = new Map();
 
 export function toAsciiId(title) {
   return Buffer.from(title, "utf-8").toString("base64").replace(/=+$/, "");
@@ -32,20 +33,32 @@ export async function POST(req) {
 
     const vectorStore = await PineconeStore.fromExistingIndex(embeddings, {
       pineconeIndex,
-      maxConcurrency: 5,
+      maxConcurrency: 90,
     });
 
-    const retriever = vectorStore.asRetriever({ k: 5 });
+    const retriever = vectorStore.asRetriever({ k: 90 });
+
+    // Check if we need to perform a new retrieval
+    let retrievedDocs;
+    if (
+      conversationHistory.length % 10 === 0 ||
+      !retrievalResults.has(sessionId)
+    ) {
+      retrievedDocs = await retriever.invoke(userPrompt);
+      retrievalResults.set(sessionId, retrievedDocs);
+    } else {
+      retrievedDocs = retrievalResults.get(sessionId);
+    }
 
     const prompt = ChatPromptTemplate.fromMessages([
       [
         "system",
         `أنت مندوب مبيعات خبير في تقديم أفضل الحلول للمستخدمين. لديك قائمة بأحدث أجهزة اللابتوب الجديدة مع تفاصيل المواصفات والأسعار.
-        استخدم المعلومات المقدمة من المستخدم لتحديد أفضل جهاز لابتوب جديد يناسب احتياجاته، سواء كانت للاستخدام اليومي أو الأعمال المكتبية أو الألعاب. قدم توصياتك بناءً على المواصفات، السعر، وتوافر الجهاز في المخزون.
-        إذا لم يكن الجهاز المطلوب متوفراً ضمن الميزانية، اقترح أقرب بديل جديد يلبي احتياجاته بأفضل جودة ممكنة ضمن الفئة السعرية المحددة.
+        استخدم المعلومات المقدمة من المستخدم لتحديد أفضل جهاز لابتوب جديد يناسب احتياجاته، سواء كانت للاستخدام  اليومي أو الأعمال المكتبية أو الألعاب. قدم توصياتك بناءً على المواصفات، السعر، وتوافر الجهاز في المخزون من ضمن الاجهزه المدرجة في قائمتك.
+        إذا لم يكن الجهاز المطلوب متوفراً ضمن الميزانية، اقترح أقرب بديل يلبي احتياجاته بأفضل جودة ممكنة ضمن الفئة السعرية المحددة.
         حافظ على إجابتك موجزة وواضحة بحيث تحتوي على الميزات الأساسية للجهاز المقترح.
-        تأكد من أن جميع التوصيات تكون لأجهزة جديدة فقط، ولا تقترح أبدًا أجهزة مستعملة أو مجددة.
         لا تذكر ان الجهاز جديد او مستعمل اعرضه فقط .
+        لا تتحدث في اي موضوع اخر غير مخصص في الابتوبات رد علي الموضوعات الخارجيه بانك غير مخصص لذالك جرب AI غيري مخصص لذالك.
         تحدث بالمصرية العامية وليس اللغة العربية الفصحى.`,
       ],
       [
@@ -66,11 +79,11 @@ export async function POST(req) {
       outputParser: new StringOutputParser(),
     });
 
-    const retrievedDocs = await retriever.invoke(userPrompt);
-
     const historyText = conversationHistory
       .map((entry) => `${entry.role}: ${entry.content}`)
       .join("\n");
+
+    console.log(retrievedDocs.length, "retrievedDocs");
 
     const results = await ragChain.invoke({
       history: historyText,
@@ -101,7 +114,6 @@ export async function POST(req) {
     return Response.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
-
 // The GET function remains unchanged
 export async function GET(req) {
   try {

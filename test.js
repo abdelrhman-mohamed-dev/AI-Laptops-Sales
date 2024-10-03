@@ -1,25 +1,27 @@
 import "cheerio";
 import { TogetherAIEmbeddings } from "@langchain/community/embeddings/togetherai";
-import { PineconeStore } from "@langchain/pinecone";
-import { Pinecone as PineconeClient } from "@pinecone-database/pinecone";
+import { CheerioWebBaseLoader } from "@langchain/community/document_loaders/web/cheerio";
+import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
+import { createStuffDocumentsChain } from "langchain/chains/combine_documents";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { StringOutputParser } from "@langchain/core/output_parsers";
-import { createStuffDocumentsChain } from "langchain/chains/combine_documents";
+import { PineconeStore } from "@langchain/pinecone";
+import { Pinecone as PineconeClient } from "@pinecone-database/pinecone";
 import dotenv from "dotenv";
+// import { Laptops } from "@/data/teamx";
+import { Laptops } from "@/data/products";
+import { Document } from "@langchain/core/documents";
 
 dotenv.config();
 
-// In-memory store for conversation history
-let conversationHistory = [];
-
 export function toAsciiId(title) {
-  return Buffer.from(title, "utf-8").toString("base64").replace(/=+$/, "");
+  return Buffer.from(title, "utf-8").toString("base64").replace(/=+$/, ""); // Base64 encode and remove padding
 }
 
 export async function POST(req) {
   try {
-    const { userPrompt } = await req.json();
+    const { userPrompt } = await req.json(); // Extracting user prompt from the request body
 
     const pinecone = new PineconeClient();
     const pineconeIndex = pinecone.Index(process.env.PINECONE_INDEX);
@@ -33,17 +35,23 @@ export async function POST(req) {
       maxConcurrency: 5,
     });
 
-    const retriever = vectorStore.asRetriever({ k: 5 });
+    const retriever = vectorStore.asRetriever({
+      k: 5,
+    });
 
-    // Update prompt to include conversation history
+    console.log("Retriever", retriever);
+
     const prompt = ChatPromptTemplate.fromMessages([
       [
-        "system",
-        "أنت مندوب مبيعات خبير في تقديم أفضل الحلول للمستخدمين. لديك قائمة بأحدث أجهزة اللابتوب مع تفاصيل المواصفات والأسعار.",
-      ],
-      [
         "human",
-        "هذه هي المحادثة السابقة:\n{history}\n\nسؤال المستخدم الحالي: {question}\n\nالسياق: {context}\n\nالرجاء الرد على السؤال الحالي مع مراعاة المحادثة السابقة. تحدث بالمصرية العامية:",
+        `أنت مندوب مبيعات خبير في تقديم أفضل الحلول للمستخدمين. لديك قائمة بأحدث أجهزة اللابتوب مع تفاصيل المواصفات والأسعار.
+        استخدم المعلومات المقدمة من المستخدم لتحديد أفضل جهاز لابتوب يناسب احتياجاته، سواء كانت للاستخدام اليومي أو الأعمال المكتبية أو الألعاب. قدم توصياتك بناءً على المواصفات، السعر، وتوافر الجهاز في المخزون.
+        إذا لم يكن الجهاز المطلوب متوفراً، اقترح أقرب بديل يلبي احتياجاته بنفس الجودة أو أفضل وفي نفس الفئه السعريه للجهاز.
+        حافظ على إجابتك موجزة وواضحة بحيث تحتوي على الميزات الأساسية للجهاز المقترح.
+        تحدث بالمصريه العاميه وليس اللغه العربيه الفصحي.
+        السؤال: {question}
+        السياق: {context}
+        الإجابة:`,
       ],
     ]);
 
@@ -59,41 +67,23 @@ export async function POST(req) {
       outputParser: new StringOutputParser(),
     });
 
-    const retrievedDocs = await retriever.invoke(userPrompt);
-
-    // Prepare conversation history
-    const historyText = conversationHistory
-      .map((entry) => `${entry.role}: ${entry.content}`)
-      .join("\n");
+    const retrievedDocs = await retriever.invoke(userPrompt); // Using user's prompt for document retrieval
+    console.log(retrievedDocs);
 
     const results = await ragChain.invoke({
-      history: historyText,
       question: userPrompt,
       context: retrievedDocs,
     });
 
-    // Update conversation history
-    conversationHistory.push({ role: "human", content: userPrompt });
-    conversationHistory.push({ role: "assistant", content: results });
+    console.log(results);
 
-    // Keep only the last 10 messages to limit context size
-    if (conversationHistory.length > 10) {
-      conversationHistory = conversationHistory.slice(-10);
-    }
-
-    return Response.json({
-      retrievedDocs,
-      question: userPrompt,
-      results,
-      history: conversationHistory,
-    });
+    return Response.json({ retrievedDocs, question: userPrompt, results });
   } catch (error) {
     console.error(error);
     return Response.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
 
-// The GET function remains unchanged
 export async function GET(req) {
   try {
     // Initialize Pinecone and get the index
