@@ -50,20 +50,26 @@ export async function POST(req) {
       retrievedDocs = retrievalResults.get(sessionId);
     }
 
+    // Filter out documents with in_stock === 0
+    const inStockDocs = retrievedDocs.filter(
+      (doc) => doc.metadata.in_stock !== 0
+    );
+
     const prompt = ChatPromptTemplate.fromMessages([
       [
         "system",
         `أنت مندوب مبيعات خبير في تقديم أفضل الحلول للمستخدمين. لديك قائمة بأحدث أجهزة اللابتوب الجديدة مع تفاصيل المواصفات والأسعار.
+        تجنب الترحيب والسلام وادخل الي الموضوع المقدم.
         استخدم المعلومات المقدمة من المستخدم لتحديد أفضل جهاز لابتوب جديد يناسب احتياجاته، سواء كانت للاستخدام  اليومي أو الأعمال المكتبية أو الألعاب. قدم توصياتك بناءً على المواصفات، السعر، وتوافر الجهاز في المخزون من ضمن الاجهزه المدرجة في قائمتك.
         إذا لم يكن الجهاز المطلوب متوفراً ضمن الميزانية، اقترح أقرب بديل يلبي احتياجاته بأفضل جودة ممكنة ضمن الفئة السعرية المحددة.
         حافظ على إجابتك موجزة وواضحة بحيث تحتوي على الميزات الأساسية للجهاز المقترح.
         لا تذكر ان الجهاز جديد او مستعمل اعرضه فقط .
         لا تتحدث في اي موضوع اخر غير مخصص في الابتوبات رد علي الموضوعات الخارجيه بانك غير مخصص لذالك جرب AI غيري مخصص لذالك.
-        تحدث بالمصرية العامية وليس اللغة العربية الفصحى.`,
+        تحدث بالمصرية العامية وليس اللغة العربية الفصحى حافظ علي الاخترافيه في التعامل.`,
       ],
       [
         "human",
-        "هذه هي المحادثة السابقة:\n{history}\n\nسؤال المستخدم الحالي: {question}\n\nالسياق: {context}\n\nالرجاء الرد على السؤال الحالي مع مراعاة المحادثة السابقة. تحدث بالمصرية العامية:",
+        "هذه هي المحادثة السابقة:\n{history}\n\nسؤال المستخدم الحالي: {question}\n\nالسياق: {context}\n\nالرجاء الرد على السؤال الحالي مع مراعاة المحادثة السابقة. تحدث بالمصرية العامية وحافظ علي الاخترافيه في التعامل:",
       ],
     ]);
 
@@ -83,12 +89,12 @@ export async function POST(req) {
       .map((entry) => `${entry.role}: ${entry.content}`)
       .join("\n");
 
-    console.log(retrievedDocs.length, "retrievedDocs");
+    console.log(inStockDocs.length, "retrievedDocs");
 
     const results = await ragChain.invoke({
       history: historyText,
       question: userPrompt,
-      context: retrievedDocs,
+      context: inStockDocs,
     });
 
     // Update conversation history (only user and AI responses)
@@ -104,7 +110,7 @@ export async function POST(req) {
     conversationHistories.set(sessionId, conversationHistory);
 
     return Response.json({
-      retrievedDocs,
+      inStockDocs,
       question: userPrompt,
       results,
       history: conversationHistory,

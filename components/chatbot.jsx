@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { marked } from 'marked';
 import { v4 as uuidv4 } from 'uuid'; // Import UUID library
+import { PlusCircle, Send } from 'lucide-react';
 
 export default function AIAgentChatbot() {
     const [messages, setMessages] = useState([]);
@@ -88,35 +89,52 @@ export default function AIAgentChatbot() {
     };
 
     return (
-        <div style={{ direction: 'rtl' }} className="flex flex-col h-screen max-w-2xl mx-auto p-4 text-right">
-            <h1 className="text-2xl font-bold mb-4">(Beta)ابحث عن لابتوب مع الذكاء الاصطناعي</h1>
-            <Button onClick={startNewChat} className="mb-4">Start New Chat</Button>
-            <ScrollArea className="flex-grow mb-4 p-4 border rounded-md shadow-2xl " ref={scrollAreaRef}>
-                {messages.map(message => (
-                    <div
-                        key={message.id}
-                        style={{ direction: 'rtl' }}
-                        className={`mb-2 p-2 rounded-lg ${message.sender === 'user' ? 'bg-blue-100 ml-auto' : 'bg-gray-100'
-                            } max-w-[80%] ${message.sender === 'user' ? 'text-right' : 'text-left'}`}
-                        dangerouslySetInnerHTML={{
-                            __html: message.sender === 'agent' ? marked(message.text) : message.text
-                        }}
-                    />
-                ))}
-                {isTyping && (
-                    <div className="text-gray-500 italic">جاري البحث ...</div>
-                )}
-            </ScrollArea>
-            <form onSubmit={handleSubmit} className="flex gap-2 shadow-2xl">
-                <Input
-                    type="text"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    placeholder="Type your message..."
-                    className="flex-grow"
-                />
-                <Button type="submit">Send</Button>
-            </form>
+        <div className="flex h-screen bg-gray-100">
+            <div className="w-64 bg-gray-800 text-white p-4">
+                <Button onClick={startNewChat} className="w-full mb-4 bg-gray-700 hover:bg-gray-600">
+                    <PlusCircle className="mr-2 h-4 w-4" /> New Chat
+                </Button>
+                <div className="text-sm opacity-50">Chat history will appear here</div>
+            </div>
+            <div className="flex-1 flex flex-col">
+                <div className="bg-white shadow-sm z-10">
+                    <h1 className="text-xl font-semibold p-4 text-right">{"دور علي الابتوب المناسب بالذكاء الاصطناعي"}</h1>
+                </div>
+                <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
+                    {messages.map(message => (
+                        <div
+                            key={message.id}
+                            className={`mb-4 ${message.sender === 'user' ? 'text-right' : 'text-left'}`}
+                        >
+                            <div
+                                dir='rtl'
+                                className={`text-right inline-block p-3 rounded-lg ${message.sender === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'
+                                    } max-w-[80%]`}
+                                dangerouslySetInnerHTML={{
+                                    __html: message.sender === 'agent' ? marked(message.text) : message.text
+                                }}
+                            />
+                        </div>
+                    ))}
+                    {isTyping && (
+                        <div className="text-gray-500 italic">AI is typing...</div>
+                    )}
+                </ScrollArea>
+                <div className="p-4 bg-white border-t">
+                    <form onSubmit={handleSubmit} className="flex gap-2">
+                        <Input
+                            type="text"
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            placeholder="Type your message..."
+                            className="flex-grow"
+                        />
+                        <Button type="submit" className="bg-green-500 hover:bg-green-600">
+                            <Send className="h-4 w-4" />
+                        </Button>
+                    </form>
+                </div>
+            </div>
         </div>
     );
 }
