@@ -58,6 +58,13 @@ export default function AIAgentChatbot() {
             }
 
             const responseData = await response.json();
+            // Log all the response data to the console
+            console.log('Response Data:', responseData);
+            console.log('In Stock Docs:', responseData.inStockDocs);
+            console.log('Question:', responseData.question);
+            console.log('Results:', responseData.results);
+            console.log('Conversation History:', responseData.history);
+
             const resultsText = responseData.results;
             const conversationHistory = responseData.history;
 
