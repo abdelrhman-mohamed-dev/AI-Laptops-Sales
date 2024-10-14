@@ -50,7 +50,7 @@ export async function POST(req) {
 
     const vectorStore = await PineconeStore.fromExistingIndex(embeddings, {
       pineconeIndex,
-      maxConcurrency: 10,
+      maxConcurrency: 20,
     });
 
     // Combine only user prompts
@@ -91,7 +91,7 @@ export async function POST(req) {
     // Perform semantic search
     const semanticResults = await vectorStore.similaritySearch(
       combinedUserPrompts,
-      10
+      20
     );
 
     // Filter out documents with in_stock === 0
@@ -100,10 +100,10 @@ export async function POST(req) {
     );
 
     // If we have less than 5 in-stock results, perform an additional search
-    if (inStockDocs.length < 10) {
+    if (inStockDocs.length < 20) {
       const additionalResults = await vectorStore.similaritySearch(
         combinedUserPrompts,
-        10
+        20
       );
       inStockDocs.push(...additionalResults);
     }
@@ -210,8 +210,8 @@ export async function POST(req) {
     conversationHistory.push({ role: "assistant", content: results });
 
     // Keep only the last 10 messages
-    if (conversationHistory.length > 10) {
-      conversationHistory = conversationHistory.slice(-10);
+    if (conversationHistory.length > 20) {
+      conversationHistory = conversationHistory.slice(-20);
     }
 
     // Save the updated history
