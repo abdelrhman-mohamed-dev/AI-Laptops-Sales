@@ -78,16 +78,6 @@ export async function POST(req) {
       userPrompt,
     ].join(" ");
 
-    // console.log("Prompt before embeddings:", contextualPrompt);
-
-    // Generate embeddings for the contextual prompt
-    // const promptEmbedding = await embeddings.embedQuery(contextualPrompt);
-
-    // console.log(
-    //   "Prompt after embeddings (vector):",
-    //   promptEmbedding + "...Done..."
-    // );
-
     // Perform semantic search
     const semanticResults = await vectorStore.similaritySearch(
       combinedUserPrompts,
@@ -190,7 +180,7 @@ export async function POST(req) {
        
         لو الجهاز اللي بيدور عليه مش موجود في القائمة، ما تقترحوش. بدل كده، قدّم بدائل مناسبة من الموجود.
     
-        تجنب الرد على الأسئلة العامة زي "أفضل لابتوب عندكم إيه؟" أو "أغلى لابتوب إيه؟". خليك مركز على التفاصيل اللي هتفيد العميل.
+        تجنب الرد على الأسئلة العامة زي "أفضل لابتوب عندكم إيه؟" أو "أغلى لابتوب إيه؟" او "أعرض قايمه اللابتوبات أيه؟". خليك مركز على التفاصيل اللي هتفيد العميل.
         
         ما تستخدمش أي تعبيرات زي "معاك حق" أو "صح". ابدأ الإجابة مباشرة بتقديم الحل المناسب.
         
@@ -205,7 +195,7 @@ export async function POST(req) {
       ],
       [
         "human",
-        "دي المحادثة السابقة:\n{history}\n\nسؤال العميل الحالي: {question}\n\nالسياق: {context}\n\nالرد على السؤال الحالي بناءً على المحادثة السابقة. اتكلم باللهجة المصرية العامية وبأسلوب احترافي:",
+        "دي المحادثة السابقة:\n{history}\n\nسؤال العميل الحالي: {question}\n\nالسياق: {context}\n\nالرد على السؤال الحالي بناءً على المحادثة السابقة. اتكلم باللهجة المصرية العامية ، لكن حافظ على الاحترافية في الشرح.:",
       ],
     ]);
 
