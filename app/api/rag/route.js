@@ -9,6 +9,9 @@ import { createStuffDocumentsChain } from "langchain/chains/combine_documents";
 import dotenv from "dotenv";
 import { Laptops } from "@/data/products";
 import { Document } from "@langchain/core/documents";
+import Together from "together-ai";
+
+const together = new Together(process.env.TOGETHER_API_KEY);
 
 dotenv.config();
 // In-memory store for conversation histories
@@ -44,14 +47,28 @@ export async function POST(req) {
     const pinecone = new PineconeClient();
     const pineconeIndex = pinecone.Index(process.env.PINECONE_INDEX);
 
-    const embeddings = new TogetherAIEmbeddings({
-      model: "togethercomputer/m2-bert-80M-8k-retrieval",
-    });
+    // Function to get embeddings using Together AI
+    async function getEmbeddings(text) {
+      const response = await together.embeddings.create({
+        model: "togethercomputer/m2-bert-80M-8k-retrieval",
+        input: text,
+      });
+      return response.data[0].embedding;
+    }
 
-    const vectorStore = await PineconeStore.fromExistingIndex(embeddings, {
-      pineconeIndex,
-      maxConcurrency: 20,
-    });
+    // const embeddings = new TogetherAIEmbeddings({
+    //   model: "togethercomputer/m2-bert-80M-8k-retrieval",
+    // });
+
+    const vectorStore = await PineconeStore.fromExistingIndex(
+      {
+        embedQuery: getEmbeddings,
+      },
+      {
+        pineconeIndex,
+        maxConcurrency: 20,
+      }
+    );
 
     // Combine only user prompts
     const combinedUserPrompts = combineUserPrompts(
@@ -65,12 +82,48 @@ export async function POST(req) {
     );
 
     // Generate embeddings for the combined user prompts
-    const promptEmbedding = await embeddings.embedQuery(combinedUserPrompts);
+    // try {
+    //   console.log(
+    //     "Combined user prompts before embeddings:",
+    //     combinedUserPrompts
+    //   );
 
-    console.log(
-      "Combined prompts after embeddings (vector):",
-      promptEmbedding.slice(0, 5) + "..."
-    );
+    //   const promptEmbedding = await embeddings.embedQuery(combinedUserPrompts);
+
+    //   console.log(
+    //     "Combined prompts after embeddings (vector):",
+    //     promptEmbedding.slice(0, 5) + "..."
+    //   );
+    // } catch (error) {
+    //   console.error("Error generating embeddings:", error);
+    //   // You might want to return a more specific error response
+    //   return Response.json(
+    //     {
+    //       error: "Failed to generate embeddings",
+    //       details: error.message,
+    //     },
+    //     { status: 500 }
+    //   );
+    // }
+
+    // Generate embeddings for the combined user prompts
+    try {
+      const promptEmbedding = await getEmbeddings(combinedUserPrompts);
+
+      console.log(
+        "Combined prompts after embeddings (vector):",
+        promptEmbedding.slice(0, 5) + "..."
+      );
+    } catch (error) {
+      console.error("Error generating embeddings:", error);
+      return Response.json(
+        {
+          error: "Failed to generate embeddings",
+          details: error.message,
+        },
+        { status: 500 }
+      );
+    }
 
     // Combine the user's current prompt with the last few messages for context
     const contextualPrompt = [

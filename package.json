@@ -9,8 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@langchain/community": "^0.2.31",
-    "@langchain/core": "^0.2.27",
+    "@langchain/community": "^0.3.10",
+    "@langchain/core": "^0.3.15",
     "@langchain/google-genai": "^0.0.26",
     "@langchain/langgraph": "^0.0.34",
     "@langchain/ollama": "^0.0.4",
@@ -41,6 +41,7 @@
     "tailwind-merge": "^2.5.2",
     "tailwind-scrollbar": "^3.1.0",
     "tailwindcss-animate": "^1.0.7",
+    "together-ai": "^0.7.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
