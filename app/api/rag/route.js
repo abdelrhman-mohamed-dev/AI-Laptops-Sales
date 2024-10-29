@@ -21,6 +21,17 @@ const retrievalResults = new Map();
 export function toAsciiId(title) {
   return Buffer.from(title, "utf-8").toString("base64").replace(/=+$/, "");
 }
+// Add OPTIONS handler for CORS preflight requests
+export async function OPTIONS(req) {
+  return new Response(null, {
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Max-Age": "86400", // 24 hours cache for preflight
+    },
+  });
+}
 
 export async function POST(req) {
   try {
