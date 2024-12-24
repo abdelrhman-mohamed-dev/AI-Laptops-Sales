@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@cerebras/cerebras_cloud_sdk": "^1.15.0",
     "@langchain/community": "^0.3.10",
     "@langchain/core": "^0.3.15",
     "@langchain/google-genai": "^0.0.26",
