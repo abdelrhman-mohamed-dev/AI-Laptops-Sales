@@ -68,7 +68,10 @@ export async function POST(req) {
     }
 
     // Combine user prompts for embedding generation
-    const combinedUserPrompts = combineUserPrompts(conversationHistory, userPrompt);
+    const combinedUserPrompts = combineUserPrompts(
+      conversationHistory,
+      userPrompt
+    );
 
     let promptEmbedding;
     try {
@@ -82,22 +85,33 @@ export async function POST(req) {
     }
 
     // Initialize Pinecone vector store
-    const vectorStore = await PineconeStore.fromExistingIndex({
-      embedQuery: getEmbeddings,
-    }, {
-      pineconeIndex,
-      maxConcurrency: 20,
-    });
+    const vectorStore = await PineconeStore.fromExistingIndex(
+      {
+        embedQuery: getEmbeddings,
+      },
+      {
+        pineconeIndex,
+        maxConcurrency: 20,
+      }
+    );
 
     // Perform semantic search
-    const semanticResults = await vectorStore.similaritySearch(combinedUserPrompts, 20);
+    const semanticResults = await vectorStore.similaritySearch(
+      combinedUserPrompts,
+      20
+    );
 
     // Filter in-stock documents
-    const inStockDocs = semanticResults.filter((doc) => doc.metadata.in_stock !== 0);
+    const inStockDocs = semanticResults.filter(
+      (doc) => doc.metadata.in_stock !== 0
+    );
 
     // Ensure minimum results by performing additional search if needed
     if (inStockDocs.length < 20) {
-      const additionalResults = await vectorStore.similaritySearch(combinedUserPrompts, 20);
+      const additionalResults = await vectorStore.similaritySearch(
+        combinedUserPrompts,
+        20
+      );
       inStockDocs.push(...additionalResults);
     }
 
@@ -111,11 +125,13 @@ export async function POST(req) {
           })
         )
       )
-    ).map(JSON.parse).map((parsed) => {
-      const doc = new Document(parsed);
-      doc.score = parsed.score; // Preserve score if available
-      return doc;
-    });
+    )
+      .map(JSON.parse)
+      .map((parsed) => {
+        const doc = new Document(parsed);
+        doc.score = parsed.score; // Preserve score if available
+        return doc;
+      });
 
     // Sort by relevance and limit results
     uniqueInStockDocs.sort((a, b) => (b.score || 0) - (a.score || 0));
@@ -125,11 +141,12 @@ export async function POST(req) {
     const prompt = ChatPromptTemplate.fromMessages([
       [
         "system",
-        `أنت مندوب مبيعات متخصص في اللابتوبات. قدم النصيحة بناءً على التفاصيل المتوفرة واحتياجات العميل.`
+        `أنت مندوب مبيعات متخصص في اللابتوبات. قدم النصيحة بناءً على التفاصيل المتوفرة واحتياجات العميل.
+        حافظ علي الاحترافيه في التعامل واحترام العميل والتقديم بالنصيحة المناسبة.`,
       ],
       [
         "human",
-        "دي المحادثة السابقة:\n{history}\n\nسؤال العميل الحالي: {question}\n\nالسياق: {context}\n\nالرد باللهجة المصرية العامية."
+        "دي المحادثة السابقة:\n{history}\n\nسؤال العميل الحالي: {question}\n\nالسياق: {context}\n\nالرد باللهجة العربيه العامية.",
       ],
     ]);
 
@@ -183,24 +200,31 @@ export async function GET(req) {
     const pinecone = new PineconeClient();
     const pineconeIndex = pinecone.Index(process.env.PINECONE_INDEX);
 
-    const vectorStore = await PineconeStore.fromExistingIndex({
-      embedQuery: getEmbeddings,
-    }, {
-      pineconeIndex,
-      includeValues: true,
-      includeMetadata: true,
-      maxConcurrency: 10,
-    });
+    const vectorStore = await PineconeStore.fromExistingIndex(
+      {
+        embedQuery: getEmbeddings,
+      },
+      {
+        pineconeIndex,
+        includeValues: true,
+        includeMetadata: true,
+        maxConcurrency: 10,
+      }
+    );
 
     const batchSize = 20;
     for (let i = 0; i < Laptops.length; i += batchSize) {
       const batch = Laptops.slice(i, i + batchSize);
       for (const laptop of batch) {
         const doc = new Document({
-          pageContent: `${laptop.name_ar}, ${laptop.name_en}, السعر: ${laptop.price} جنيه, In Stock: ${laptop.in_stock ? "متوفر" : "غير متوفر"}`,
+          pageContent: `${laptop.name_ar}, ${laptop.name_en}, السعر: ${
+            laptop.price
+          } جنيه, In Stock: ${laptop.in_stock ? "متوفر" : "غير متوفر"}`,
           metadata: laptop,
         });
-        await vectorStore.addDocuments([doc], { ids: [`laptop-${laptop.name_en}`] });
+        await vectorStore.addDocuments([doc], {
+          ids: [`laptop-${laptop.name_en}`],
+        });
       }
       await new Promise((resolve) => setTimeout(resolve, 500));
     }
@@ -208,6 +232,9 @@ export async function GET(req) {
     return Response.json({ message: "All laptops stored successfully." });
   } catch (error) {
     console.error("Error in GET handler:", error);
-    return Response.json({ error: "Failed to store laptops." }, { status: 500 });
+    return Response.json(
+      { error: "Failed to store laptops." },
+      { status: 500 }
+    );
   }
 }
